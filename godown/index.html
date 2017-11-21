@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+  <head>
+    <title>GopherJS GoDown</title>
+		<link rel="stylesheet" type="text/css" href="index.css">
+  </head>
+  <body>
+    <div class="box" id="input">
+      <textarea
+        id="sourceGo"
+        autocorrect="off"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false">
+
+package main
+
+import (
+  "fmt"
+  // "github.com/gopherjs/gopherjs/js"
+)
+
+func main() {
+  fmt.Println("Hello World from GopherJS")
+  println("This message goes to console")
+  fmt.Println("Goodbye World")
+}
+
+      </textarea>
+    </div>
+
+    <div class="box">
+      <div id="sourceJavascript">
+      </div>
+    </div>
+
+    <div class="box">
+      <div id="evalOutput">
+      </div>
+    </div>
+
+  <script src="godown.js"></script>
+  <script>
+
+  function pad(n) {
+      return n.length < 2 ? "0" + n : n;
+  }
+
+  window.goPrintToConsole = function(msg) {
+
+    var array = new Uint8Array(msg.$array);
+    var str = "";
+    for( var i = 0, len = array.length; i < len; ++i ) {
+        str += ( "%" + pad(array[i].toString(16)))
+    }
+
+    var smsg = decodeURIComponent(str);
+
+    var evalOutput = document.getElementById('evalOutput');
+    evalOutput.innerHTML += "<pre><code>" + smsg + "</code></pre>";
+  };
+  window.goPanicHandler = function(msg) {
+    var evalOutput = document.getElementById('evalOutput');
+    evalOutput.innerHTML += "<pre><code>" + smsg + "</code></pre>";
+  };
+
+
+  </script>
+  <script>
+    var sourceGo = document.getElementById('sourceGo').value;
+    console.log('sourceGo', sourceGo);
+    window.godownBase = window.location.href;
+    godownTranslate('main', sourceGo, function(translatedCode) {
+      var sourceJavascriptElement = document.getElementById('sourceJavascript');
+      if (translatedCode.indexOf('ERROR: ') === 0) {
+        console.log('godownTranslate ' + translatedCode);
+
+        sourceJavascriptElement.innerHTML =
+`
+<pre><code>
+${translatedCode}
+</code><pre>
+`;
+      }
+      else {
+        console.log('godownTranslate SUCCESS:', translatedCode);
+        sourceJavascriptElement.innerHTML =
+`
+<pre><code>
+${translatedCode}
+</code><pre>
+`;
+
+        eval(translatedCode);
+      }
+    });
+  </script>
+  </body>
+</html>

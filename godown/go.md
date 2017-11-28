@@ -1,92 +1,118 @@
-### Integrating GopherJS with Smartdown in two beers
+## Integrating GopherJS with Smartdown in two beers
 
-- https://github.com/gopherjs/gopherjs
-- https://github.com/gopherjs/gopherjs.github.io
+A couple weeks ago on a Friday evening, I set my mind to integrating a non-Javascript language into Smartdown in order to learn/teach such a language via Smartdown. After eliminating ClojureScript, ScalaJS, and KotlinJS via a fairly simple process of determining whether their demos worked offline, I settled on [GopherJS](https://github.com/gopherjs/gopherjs), the Javascript implementation of Go, as a worthy target.
 
----
+Why? Because the [GopherJS Playground](https://github.com/gopherjs/gopherjs.github.io) worked wonderfully offline, proving that compilation of my Go source code was occurring in the browser, and satisfying my need for such a capability in Smartdown.
 
-#### Domsub creates DOM and signals channel on Click
+### It took more than two beers
+
+I'm going to write a more detailed article about this project, but I eventually succeeded in learning Go, adapting the GopherJS Playground to work as a UI-less body of code, and integrating this code into Smartdown in a reasonable way. This document is an example of the potential of GoDown, the Smartdown+Go integration.
+
+### Producer/Consumer Example
+
+This demonstrates the use of multiple Go packages, the use of the GopherJS DOM package, and the use of channels to communicate between multiple processes.
+
+#### ProducerA
+
+Creates a Button that emits an "A" to the channel
 
 ```go/playable/autoplay
-package domsub
+package producerA
 
 import (
   "honnef.co/go/js/dom"
+  "github.com/gopherjs/gopherjs/js"
 )
 
-func Domsub(ch chan int) {
-  println("after Alert")
-
+func Producer(ch chan string) {
   d := dom.GetWindow().Document()
 
-  foo := d.GetElementByID("div_playable_1").(*dom.HTMLDivElement)
-  foo.SetInnerHTML("<h1>Click Me</h1>")
-  foo.AddEventListener("click", false, func(event dom.Event) {
-    div := d.CreateElement("div").(*dom.HTMLDivElement)
-    div.Style().SetProperty("color", "red", "")
-    div.SetTextContent("I am new div")
-    foo.ParentNode().InsertBefore(div, foo)
-    ch <- 1
+  myDivId := js.Global.Get("godownDiv_producerA").String()
+  println("myDivId", myDivId)
+  div := d.GetElementByID(myDivId).(*dom.HTMLDivElement)
+  div.SetInnerHTML("<button>Produce A</button>")
+  div.AddEventListener("click", false, func(event dom.Event) {
+    ch <- "A"
   })
 }
 ```
 
-#### Main program invokes Domsub and waits on channel
+#### ProducerB
+
+Creates a Button that emits a "B" to the channel
+
+```go/playable/autoplay
+package producerB
+
+import (
+  "honnef.co/go/js/dom"
+  "github.com/gopherjs/gopherjs/js"
+)
+
+func Producer(ch chan string) {
+  d := dom.GetWindow().Document()
+
+  myDivId := js.Global.Get("godownDiv_producerB").String()
+  println("myDivId", myDivId)
+  div := d.GetElementByID(myDivId).(*dom.HTMLDivElement)
+  div.SetInnerHTML("<button>Produce B</button>")
+  div.AddEventListener("click", false, func(event dom.Event) {
+    ch <- "B"
+  })
+}
+```
+
+#### Consumer
+
+Reads from the channel and displays a log of all received messages.
+
+```go/playable/autoplay
+package consumer
+
+import (
+  "honnef.co/go/js/dom"
+  "github.com/gopherjs/gopherjs/js"
+)
+
+func Consumer(ch chan string) {
+  d := dom.GetWindow().Document()
+  consumed := ""
+  myDivId := js.Global.Get("godownDiv_consumer").String()
+  println("myDivId", myDivId)
+  div := d.GetElementByID(myDivId).(*dom.HTMLDivElement)
+
+  for {
+    div.SetInnerHTML("<h1>Consumed: " + consumed + "</h1>")
+    consumedChar := <- ch
+    consumed += consumedChar
+  }
+}
+```
+
+#### Main program invokes Producers and Consumer and then Chills
+
+All Go programs start with `main`. In this example, we just use `main` to tie together the various producer/consumer components and give them a shared channel for communication. It is totally possible, and reasonable to combine `producerA` and `producerB` into a parametrized package `producer`; but this demo evolved to show off the multi-package capability.
 
 ```go/playable/autoplay
 package main
 
 import (
-  "domsub"
+  "producerA"
+  "producerB"
+  "consumer"
 )
 
-var ch chan int
+var ch chan string
 
-func sub() {
-  ch = make(chan int, 5)
-  domsub.Domsub(ch)
-  v1 := <- ch
-  println("clicked", v1)
+func setupProducerConsumer() {
+  ch = make(chan string, 5)
+  producerA.Producer(ch)
+  producerB.Producer(ch)
+  consumer.Consumer(ch)
 }
 func main() {
-  sub()
+  setupProducerConsumer()
   println("All Done")
 }
 
 ```
-
-### Define a channel
-
-```gox/playable
-package sub
-
-var SubName = "Hello from sub"
-var SubChan = make(chan int, 2)
-
-func Sub() {
-  println("Sub setting SubChan")
-  SubChan <- 1
-}
-```
-
-
-```gox/playable
-package main
-
-import (
-  "sub"
-)
-
-func main() {
-  println("main before goRoutine")
-  println("goRoutine before SubChan")
-  sub.Sub()
-  v1 := <- sub.SubChan
-  println("goRoutine after SubChan", v1)
-  sub.SubChan <- 2
-  v2 := <- sub.SubChan
-  println("main complete", v2)
-}
-```
-
-

@@ -153,7 +153,6 @@ func main() {
 					}
 					pkgsReceived++
 					if pkgsReceived == len(pkgsToLoad) {
-						println("packagesReady1 <- true", len(packages))
 						packagesReady <- true
 					}
 				}(path)

@@ -45,6 +45,7 @@ cp "$GOPATH"/pkg/*_js_min/github.com/gopherjs/gopherjs/nosync.a pkg/github.com/g
 mkdir -p pkg/honnef.co/go/js
 cp "$HOME"/go/pkg/*_js_min/honnef.co/go/js/dom.a pkg/honnef.co/go/js/dom.a
 cp "$HOME"/go/pkg/*_js_min/honnef.co/go/js/xhr.a pkg/honnef.co/go/js/xhr.a
+cp "$HOME"/go/pkg/*_js_min/honnef.co/go/js/util.a pkg/honnef.co/go/js/util.a
 # cp "$HOME"/go/pkg/*_js_min/github.com/flimzy/kivik.a github.com/flimzy/kivik.a
 
 # Make a copy of GOROOT that is user-writeable,

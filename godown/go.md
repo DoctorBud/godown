@@ -30,8 +30,13 @@ func Producer(ch chan string) {
   myDivId := js.Global.Get("godownDiv_producerA").String()
   println("myDivId", myDivId)
   div := d.GetElementByID(myDivId).(*dom.HTMLDivElement)
-  div.SetInnerHTML("<button>Produce A</button>")
-  div.AddEventListener("click", false, func(event dom.Event) {
+  div.SetInnerHTML("")
+
+  child := d.CreateElement("button").(*dom.HTMLButtonElement)
+  child.Style().SetProperty("color", "purple", "")
+  child.SetTextContent("Produce A")
+  div.AppendChild(child)
+  child.AddEventListener("click", false, func(event dom.Event) {
     ch <- "A"
   })
 }
@@ -55,16 +60,23 @@ func Producer(ch chan string) {
   myDivId := js.Global.Get("godownDiv_producerB").String()
   println("myDivId", myDivId)
   div := d.GetElementByID(myDivId).(*dom.HTMLDivElement)
-  div.SetInnerHTML("<button>Produce B</button>")
-  div.AddEventListener("click", false, func(event dom.Event) {
+  div.SetInnerHTML("")
+
+  child := d.CreateElement("button").(*dom.HTMLButtonElement)
+  child.Style().SetProperty("color", "purple", "")
+  child.SetTextContent("Produce B")
+  div.AppendChild(child)
+  child.AddEventListener("click", false, func(event dom.Event) {
     ch <- "B"
   })
 }
 ```
 
+
 #### Consumer
 
 Reads from the channel and displays a log of all received messages.
+
 
 ```go/playable/autoplay
 package consumer
@@ -82,16 +94,22 @@ func Consumer(ch chan string) {
   div := d.GetElementByID(myDivId).(*dom.HTMLDivElement)
 
   for {
-    div.SetInnerHTML("<h1>Consumed: " + consumed + "</h1>")
-    consumedChar := <- ch
-    consumed += consumedChar
+    div.SetInnerHTML("<h1>" + consumed + "</h1>")
+    consumedChar, more := <- ch
+    if more {
+      consumed += consumedChar
+    } else {
+      break
+    }
   }
 }
 ```
 
+
 #### Main program invokes Producers and Consumer and then Chills
 
 All Go programs start with `main`. In this example, we just use `main` to tie together the various producer/consumer components and give them a shared channel for communication. It is totally possible, and reasonable to combine `producerA` and `producerB` into a parametrized package `producer`; but this demo evolved to show off the multi-package capability.
+
 
 ```go/playable/autoplay
 package main
@@ -100,18 +118,21 @@ import (
   "producerA"
   "producerB"
   "consumer"
+  "github.com/gopherjs/gopherjs/js"
 )
 
 var ch chan string
 
-func setupProducerConsumer() {
-  ch = make(chan string, 5)
-  producerA.Producer(ch)
-  producerB.Producer(ch)
-  consumer.Consumer(ch)
-}
 func main() {
-  setupProducerConsumer()
+  js.Global.Set("Godown_Shutdown", js.InternalObject(func(msg string) {
+    close(ch)
+  }))
+
+  ch = make(chan string, 5)
+  go producerA.Producer(ch)
+  go producerB.Producer(ch)
+  go consumer.Consumer(ch)
+
   println("All Done")
 }
 

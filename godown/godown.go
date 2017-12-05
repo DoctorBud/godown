@@ -10,6 +10,8 @@ import (
 	"github.com/gopherjs/gopherjs/compiler"
 	"github.com/gopherjs/gopherjs/js"
 	"honnef.co/go/js/xhr"
+	"os"
+	"runtime"
 )
 
 type Line map[string]string
@@ -70,7 +72,7 @@ func main() {
 		lastError := ""
 
 		// We only need to parse the source once
-		file, err := parser.ParseFile(fileSet, "prog.go", code, parser.ParseComments)
+		file, err := parser.ParseFile(fileSet, packageName + ".go", code, parser.ParseComments)
 		if err != nil {
 			if list, ok := err.(scanner.ErrorList); ok {
 				output := ""
@@ -179,11 +181,20 @@ func main() {
 			jsCode.WriteString("} catch (err) {\ngoPanicHandler(err.message);\n}\n")
 			transformedCode = jsCode.String()
 		} else {
-			transformedCode = "console.log('package " + packageName + "');"
+			transformedCode = "";	// "console.log('package " + packageName + "');"
 		}
 
 		return transformedCode
 	}
+
+	js.Global.Set("Godown_Breakpoint", runtime.Breakpoint)
+	js.Global.Set("Godown_Version", runtime.Version)
+	js.Global.Set("Godown_NumGoroutine", runtime.NumGoroutine)
+	js.Global.Set("Godown_Gosched", runtime.Gosched)
+
+	js.Global.Set("Godown_Exit", js.InternalObject(func() {
+		os.Exit(1);
+	}))
 
 	js.Global.Set("goPanicHandler", js.InternalObject(func(msg string) {
 		println("goPanicHandler", "Panic:", msg);
